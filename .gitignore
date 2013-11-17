@@ -1,6 +1,11 @@
+/target
+/classes
+/checkouts
+/resources/public/json/
+/resources/public/js/script.js
 pom.xml
-*jar
-/lib/
-/classes/
-/targets/
-.lein-deps-sum
+pom.xml.asc
+*.jar
+*.class
+/.lein-*
+/.nrepl-port
