@@ -1,0 +1,30 @@
+(ns codegumi.views
+  (:require [cheshire.core :refer :all])
+  (:use [hiccup core page]))
+
+(defn page-template [photos]
+  (html5
+   [:head
+    [:title "Flicky World"]
+    (include-css "/css/style.css")]
+   [:body
+    [:h1 "Hello "]
+    [:form {:id "tag-form"}
+     [:input {:type "text" :placeholder "Enter search tag" :id "tag-input"}]
+     [:input {:type "submit" :value "Search" :id "tag-submit"}]]
+    [:ul {:id "photos"}]
+    [:script (str "var Flicky = " photos ";")]
+    (include-js "/js/script.js")]))
+
+(defn index-page []
+  (html5
+   [:head
+    [:title "Flicky World"]
+    (include-css "/css/style.css")]
+   [:body
+    [:h1 "Hello "]
+    [:form {:id "tag-form"}
+     [:input {:type "text" :placeholder "Enter search tag" :id "tag-input"}]
+     [:input {:type "submit" :value "Search" :id "tag-submit"}]]
+    [:ul {:id "photos"}]
+    (include-js "/js/script.js")]))
