@@ -5,10 +5,10 @@
 (defn page-template [photos]
   (html5
    [:head
-    [:title "Flicky World"]
+    [:title "CodeGumi"]
     (include-css "/css/style.css")]
    [:body
-    [:h1 "Hello "]
+    [:h1 "Hello " [:span {:class "title-tag"}]]
     [:form {:id "tag-form"}
      [:input {:type "text" :placeholder "Enter search tag" :id "tag-input"}]
      [:input {:type "submit" :value "Search" :id "tag-submit"}]]
@@ -19,10 +19,10 @@
 (defn index-page []
   (html5
    [:head
-    [:title "Flicky World"]
+    [:title "CodeGumi"]
     (include-css "/css/style.css")]
    [:body
-    [:h1 "Hello "]
+    [:h1 "Hello " [:span {:class "title-tag"}]]
     [:form {:id "tag-form"}
      [:input {:type "text" :placeholder "Enter search tag" :id "tag-input"}]
      [:input {:type "submit" :value "Search" :id "tag-submit"}]]

@@ -25,7 +25,7 @@
     (dommy/append! (sel1 :#photos) (image-template photo))))
 
 (defn append-tags [response]
-  (dommy/append! (sel1 :h1) (string/join "," (get response "tags"))))
+  (dommy/set-text! (sel1 ".title-tag") (string/join "," (get response "tags"))))
 
 (defn handler [response]
   (aset js/window "response" response)
