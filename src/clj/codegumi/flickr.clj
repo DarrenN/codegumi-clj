@@ -15,7 +15,7 @@
                      "sort" "interestingness-desc"
                      "content_type" 1
                      "extras" "description,owner_name,tags,path_alias,url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o"
-                     "per_page" 100
+                     "per_page" 25
                      "tag_mode" "all"})
 
 (defn search-json
