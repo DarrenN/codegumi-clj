@@ -47,27 +47,28 @@
       (remove-item))))
 
 (register-listener destroy-listeners (fn [item]
-                                       (.log js/console (get item "title"))
-                                       (dommy/remove! (sel1 (string/join "_" ["#photo" (get item "id")])))))
+                                       (if (not (nil? item))
+                                         (dommy/remove! (sel1 (string/join "_" ["#photo" (get item "id")]))))))
 
 (register-listener add-listeners (fn [item]
-                                   (dommy/append! (sel1 :#photos) (image-template item))))
+                                   (if (not (nil? item))
+                                     (dommy/append! (sel1 :#photos) (image-template item)))))
 
 (def photo-queue (create-buffer 25))
 
-; Instead of doseq try and run a setTimeout using a recursive function
-; with an atom as the local var (let [r (atom [])) to hold the
-; reducing sequence
+; Recur through photos with a 50ms delay
 (defn append-photos [response]
-  (doseq [photo (get response "photos")]
-    (photo-queue photo)))
+  (photo-queue (first response))
+  (if (empty? response)
+    (.log js/console "Response empty")
+    (js/setTimeout #(append-photos (vec (rest response))) 50)))
 
 (defn append-tags [response]
   (dommy/set-text! (sel1 ".title-tag") (string/join "," (get response "tags"))))
 
 (defn handler [response]
   (aset js/window "response" response)
-  (append-photos response)
+  (append-photos (get response "photos"))
   (append-tags response))
 
 (defn error-handler [{:keys [status status-text]}]
