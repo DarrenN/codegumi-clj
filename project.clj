@@ -14,7 +14,8 @@
                  [cljs-ajax "0.2.2"]
                  [environ "0.4.0"]]
   :plugins [[lein-cljsbuild "1.0.0-alpha2"]
-            [lein-ring "0.8.8"]]
+            [lein-ring "0.8.8"]
+            [lein-environ "0.4.0"]]
   :source-paths ["src/clj" "src/cljs"]
   :cljsbuild {
               :builds [{
