@@ -17,4 +17,6 @@ h1 {
 #photos li {
     list-style-type: none;
     display: inline-block;
+    position: absolute;
+    z-index: 500;
 }

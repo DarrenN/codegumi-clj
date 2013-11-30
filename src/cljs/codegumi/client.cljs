@@ -3,7 +3,12 @@
     [clojure.string :as string]
     [dommy.utils :as utils]
     [dommy.core :as dommy]
+    [enfocus.core :as ef]
+    [enfocus.events :as events]
+    [enfocus.effects :as effects]
     [ajax.core :refer [GET POST]])
+  (:require-macros
+   [enfocus.macros :as em])
   (:use-macros
    [dommy.macros :only [node sel sel1]]))
 
@@ -46,13 +51,30 @@
     (when (> (count @plist) size)
       (remove-item))))
 
+(defn insert-photo-node [item]
+  (dommy/append! (sel1 :#photos) (image-template item))
+  item)
+
+(defn get-photo-id [item]
+  (string/join "_" ["#photo" (get item "id")]))
+
+(em/defaction fade-out-photo [id]
+  [id]
+  (effects/fade-out 500)
+  (ef/remove-node))
+
+(em/defaction fade-in-photo [id]
+  [id]
+  (ef/set-style :top (str (rand 1000) "px") :left (str (rand 1000) "px") :z-index (str (+ 500 (rand 100))))
+  (effects/fade-in 1000))
+
 (register-listener destroy-listeners (fn [item]
                                        (if (not (nil? item))
-                                         (dommy/remove! (sel1 (string/join "_" ["#photo" (get item "id")]))))))
+                                         (fade-out-photo (get-photo-id item)))))
 
 (register-listener add-listeners (fn [item]
                                    (if (not (nil? item))
-                                     (dommy/append! (sel1 :#photos) (image-template item)))))
+                                     (fade-in-photo (get-photo-id (insert-photo-node item))))))
 
 (def photo-queue (create-buffer 25))
 
