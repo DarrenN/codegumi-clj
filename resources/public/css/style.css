@@ -1,17 +1,31 @@
 html {
     background: transparent;
     font-size: 100%;
+    margin: 0;
 }
 
 body {
-    padding: 20px;
+    padding: 0;
+    margin: 0;
     font-family: 'Helvetica Neue', Helvetica, arial, sans-serif;
     color: #333;
+    min-height: 100%;
+    overflow: hidden;
 }
 
 h1 {
-    margin: 0;
+    margin: 20px 0 0 20px;
     color: #666;
+    position: absolute;
+    z-index: 1000;
+    background: #fff;
+}
+
+form {
+    position: absolute;
+    z-index: 1000;
+    background: #fff;
+    margin: 50px 0 0 20px;
 }
 
 #photos li {
@@ -19,4 +33,5 @@ h1 {
     display: inline-block;
     position: absolute;
     z-index: 500;
+    visibility: none;
 }
