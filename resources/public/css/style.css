@@ -33,5 +33,5 @@ form {
     display: inline-block;
     position: absolute;
     z-index: 500;
-    visibility: none;
+    opacity: 0;
 }
