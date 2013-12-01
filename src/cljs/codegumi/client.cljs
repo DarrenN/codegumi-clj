@@ -6,11 +6,14 @@
     [enfocus.core :as ef]
     [enfocus.events :as events]
     [enfocus.effects :as effects]
-    [ajax.core :refer [GET POST]])
+    [ajax.core :refer [GET POST]]
+    [clojure.browser.repl :as repl])
   (:require-macros
    [enfocus.macros :as em])
   (:use-macros
    [dommy.macros :only [node sel sel1]]))
+
+(repl/connect "http://localhost:9000/repl")
 
 (defn ^:export log [thing] (.log js/console (clj->js thing)))
 
@@ -46,6 +49,9 @@
     (when (> (count @plist) size)
       (remove-item))))
 
+(defn get-photo-id [item]
+  (string/join "_" ["#photo" (item :counter)]))
+
 (defn get-photo-size [photo]
   "Randomly find a photo size from the object, recur until a valid one is found"
   (let [size (nth photo-sizes (rand (count photo-sizes)))]
@@ -73,50 +79,59 @@
         zindex (get-zindex image)]
     (str "top: " top "px; left: " left "px; z-index: " zindex)))
 
-(defn image-template [photo]
-  (let [image (get-photo-size photo)
-        position (get-photo-position image)]
-    (node
-     [:li {:id (string/join "_" ["photo" (photo :counter)]) :class (image :size) :style position}
-      [:img {:src (image :url)
-             :width (image :width)
-             :height (image :height)
-             :alt (get photo "owner")
-             :title (get photo "title")}]])))
-
-(defn insert-photo-node [item]
-  (dommy/append! (sel1 :#photos) (image-template item))
-  item)
-
-(defn get-photo-id [item]
-  (string/join "_" ["#photo" (item :counter)]))
-
 (em/defaction fade-out-photo [id]
   [id]
-  (effects/chain (effects/fade-out 500)
+  (effects/chain (effects/fade-out (+ 1000 (rand 500)))
                  (ef/remove-node)))
 
 (em/defaction fade-in-photo [id]
   [id]
-  (effects/chain (effects/fade-in 1000)))
+  (effects/chain (effects/fade-in (+ 1000 (rand 500)))))
 
-(register-listener destroy-listeners (fn [item]
-                                       (if (not (nil? item))
-                                         (fade-out-photo (get-photo-id item)))))
+(defn image-template [item image position]
+  (node
+     [:li {:id (string/join "_" ["photo" (item :counter)]) :class (image :size) :style position}]))
 
-(register-listener add-listeners (fn [item]
-                                   (if (not (nil? item))
-                                     (fade-in-photo (get-photo-id (insert-photo-node item))))))
+(defn insert-photo-node [item]
+  ; We have to create the Image dynamically so we can attach an onload
+  ; handler which allows it to fade-in AFTER it has loaded from the server
+  (let [image (get-photo-size item)
+        position (get-photo-position image)
+        li (image-template item image position)
+        img (js/Image.)]
+    ; set img properties
+    (set! (.-src img) (image :url))
+    (set! (.-width img) (image :width))
+    (set! (.-height img) (image :height))
+    (set! (.-alt img) (get item "owner"))
+    (set! (.-title img) (get item "title"))
+    (set! (.-onload img) (fn [] (fade-in-photo (get-photo-id item))))
+    (dommy/append! li img)
+    (dommy/append! (sel1 :#photos) li)
+    item))
 
+(defn on-item-add [item]
+  (when-not (nil? item)
+    (insert-photo-node item)))
+
+(defn on-item-remove [item]
+  (when-not (nil? item)
+    (fade-out-photo (get-photo-id item))))
+
+(register-listener destroy-listeners on-item-remove)
+(register-listener add-listeners on-item-add)
+
+; Create the main sliding buffer
 (def photo-queue (create-buffer 25))
 
-; Recur through photos with a 50ms delay
+; Recur through photos with a 50ms delay, the item-counter is a global
+; and used for ids
 (defn append-photos [response]
   (let [r (first response)
         photo (conj r {:counter @item-counter})]
     (when-not (nil? r)
       (photo-queue photo)
-      (swap! item-counter inc))
+      (swap! item-counter inc)) ; increment global counter
     (when-not (empty? response)
       (js/setTimeout #(append-photos (vec (rest response))) 50))))
 
@@ -138,8 +153,7 @@
 
 (defn submit-handler [e]
   (.preventDefault e)
-  (fetch-tag (dommy/value (sel1 :#tag-input)))
-  (.log js/console e))
+  (fetch-tag (dommy/value (sel1 :#tag-input))))
 
 (dommy/listen! (sel1 :#tag-submit) :click submit-handler)
 
