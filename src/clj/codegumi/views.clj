@@ -25,6 +25,8 @@
     [:h1 "Hello " [:span {:class "title-tag"}]]
     [:form {:id "tag-form"}
      [:input {:type "text" :placeholder "Enter search tag" :id "tag-input"}]
-     [:input {:type "submit" :value "Search" :id "tag-submit"}]]
+     [:input {:type "submit" :value "Search" :id "tag-submit"}]
+     [:button {:id "btn-pause"} "Pause"]
+     [:button {:id "btn-play"} "Play"]]
     [:ul {:id "photos"}]
     (include-js "/js/script.js")]))
