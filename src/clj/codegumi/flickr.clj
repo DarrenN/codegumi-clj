@@ -49,5 +49,7 @@
       (save-photo-json filename tags))))
 
 (defn get-random-photos []
-  (let [filename (rand-nth (seq (.list (io/file "resources/public/json"))))]
-    (slurp (apply str ["resources/public/json/" filename]))))
+  (let [filename (rand-nth (seq (.list (io/file "resources/public/json/"))))]
+    (if (nil? (re-find #"json" filename))
+      (get-random-photos)
+      (slurp (apply str ["resources/public/json/" filename])))))
