@@ -28,26 +28,24 @@
 (defn search-tags
   [tags]
   (let [json (search-json {"tags" (string/join "," tags)})]
-    (if (== (:status json) 200)
-      (get-in json [:body :photos :photo])
-      nil)))
+    (when (== (:status json) 200)
+      (get-in json [:body :photos :photo]))))
 
 (defn save-photo-json
   [filename tags]
   (let [photos (search-tags tags)]
-    (if (nil? photos)
-      nil
+    (when-not (nil? photos)
       (let [photo-json (generate-string {:tags tags, :photos photos} {:escape-non-ascii true})]
         (spit filename photo-json)
         photo-json))))
 
 (defn get-photos
   [tags]
-  (let [filename (apply str ["resources/public/json/" (string/join "_" tags) ".json"])]
+  (let [filename (string/join ["resources/public/json/" (string/join "_" tags) ".json"])]
     (if (.exists (io/file filename))
       (slurp filename)
       (save-photo-json filename tags))))
 
 (defn get-random-photos []
   (let [filename (rand-nth (seq (.list (io/file "resources/public/json"))))]
-    (slurp (apply str ["resources/public/json/" filename]))))
+    (slurp (string/join ["resources/public/json/" filename]))))
