@@ -3,17 +3,15 @@
    [codegumi.buffer :as buffer]
    [codegumi.photo :as photo]
    [clojure.string :as string]
-   [dommy.utils :as utils]
-   [dommy.core :as dommy]
    [enfocus.core :as ef]
    [enfocus.events :as events]
    [enfocus.effects :as effects]
    [ajax.core :refer [GET POST]]
+   [cljs.core.async :refer (<! >! chan put! take! alts! timeout close! dropping-buffer sliding-buffer)]
    [clojure.browser.repl :as repl])
   (:require-macros
-   [enfocus.macros :as em])
-  (:use-macros
-   [dommy.macros :only [node sel sel1]]))
+   [enfocus.macros :as em]
+   [cljs.core.async.macros :refer (go alt!)]))
 
 (repl/connect "http://localhost:9000/repl")
 
@@ -24,6 +22,7 @@
 (def window-dimensions (atom {:width (.-innerWidth js/window) :height (.-innerHeight js/window)}))
 (def item-counter (atom 0))
 (def random-play (atom 1))
+(def timeout-id (atom 0))
 
 ; When window is resized, recalc window-dimensions to new value
 (ef/at js/window (events/listen :resize (fn [] (reset! window-dimensions {:width (.-innerWidth js/window) :height (.-innerHeight js/window)}))))
@@ -39,10 +38,9 @@
 
 (defn on-item-add [item]
   (when-not (nil? item)
-    (dommy/append! (sel1 :#photos)
-                   (photo/build-photo-node item
-                                           @window-dimensions
-                                           (fn [] (fade-in-photo (photo/get-photo-id item)))))))
+    (ef/at "#photos" (ef/append (photo/build-photo-node item
+                                                        @window-dimensions
+                                                        (fn [] (fade-in-photo (photo/get-photo-id item))))))))
 
 (defn on-item-remove [item]
   (when-not (nil? item)
@@ -66,7 +64,7 @@
       (js/setTimeout #(append-photos (vec (rest response))) 50))))
 
 (defn append-tags [response]
-  (dommy/set-text! (sel1 ".title-tag") (string/join "," (get response "tags"))))
+  (ef/at ".title-tag" (ef/content (string/join "," (get response "tags")))))
 
 (defn handler [response]
   (aset js/window "response" response)
@@ -87,16 +85,16 @@
                            :headers {:Accept "application/json"}}))
 
 (defn check-interval []
+  ; Clear out any existing timeouts before starting a new one
   (when (= 1 @random-play)
     (fetch-random)
-    (js/setTimeout #(check-interval) 10000)))
+    (js/clearTimeout @timeout-id)
+    (reset! timeout-id (js/setTimeout #(check-interval) 10000))))
 
 (defn submit-handler [e]
   (.preventDefault e)
   (reset! random-play 0)
-  (fetch-tag (dommy/value (sel1 :#tag-input))))
-
-;(dommy/listen! (sel1 :#tag-submit) :click submit-handler)
+  (fetch-tag (ef/from "#tag-input" (ef/get-prop :value))))
 
 (ef/at "#tag-submit" (events/listen :click submit-handler))
 
@@ -112,6 +110,26 @@
                                    (.preventDefault e)
                                    (reset! random-play 1)
                                    (check-interval))))
+
+(defn drag [[type event]]
+  (log type))
+
+(defn listen [el type]
+  (let [out (chan)]
+    (ef/at el (events/listen type
+                             (fn [e] (put! out e))))
+    out))
+
+
+(let [mouse (listen js/document :mousedown)]
+  (go (while true
+        (let [e (<! mouse)]
+          (drag [:mousedown e])))))
+
+
+;; (ef/at js/document (events/listen :mousemove
+;;                                   (fn [e]
+;;                                     (put! mouse [(.-clientX e) (.-clientY e)]))))
 
 (when (nil? (.-Flicky js/window))
   (check-interval))

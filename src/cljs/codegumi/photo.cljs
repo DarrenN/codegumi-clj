@@ -1,10 +1,11 @@
 (ns codegumi.photo
   (:require
    [clojure.string :as string]
-   [dommy.core :as dommy]
-   [dommy.utils :as utils])
-  (:use-macros
-   [dommy.macros :only [node]]))
+   [enfocus.core :as ef]))
+
+;; Enfocus spits out hiccup temapltes to console.log in ef/html
+;; unless we set this
+(set! (.-debug enfocus.core) false)
 
 ; Functions to generate size, zindex and position and DOM element of a Photo
 
@@ -38,11 +39,11 @@
         top (- (rand (window :height)) offset-y)
         left (- (rand (window :width)) offset-x)
         zindex (get-zindex image)]
-    (str "top: " top "px; left: " left "px; z-index: " zindex)))
+    (str "top: " (.floor js/Math top) "px; left: " (.floor js/Math  left) "px; z-index: " zindex)))
 
 (defn image-template [item image position]
-  (node
-     [:li {:id (string/join "_" ["photo" (item :counter)]) :class (image :size) :style position}]))
+  (ef/html
+     [:li {:id (string/join "_" ["photo" (item :counter)]), :class (image :size), :style position}]))
 
 (defn build-photo-node [item window onload]
   ; We have to create the Image dynamically so we can attach an onload
@@ -58,5 +59,5 @@
     (set! (.-alt img) (get item "owner"))
     (set! (.-title img) (get item "title"))
     (set! (.-onload img) onload)
-    (dommy/append! li img)
+    (ef/at li (ef/append img))
     li))
