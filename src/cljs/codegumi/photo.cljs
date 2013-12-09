@@ -1,6 +1,9 @@
 (ns codegumi.photo
   (:require
    [clojure.string :as string]
+   [goog.object :as gobj]
+   [domina :as dom]
+   [domina.css :as css]
    [enfocus.core :as ef]))
 
 ;; Enfocus spits out hiccup temapltes to console.log in ef/html
@@ -64,4 +67,16 @@
     (set! (.-onload img) onload)
     (ef/at li
            ".image-link" (ef/append img))
+    (gobj/clear img)
     li))
+
+(defn get-photo-center [li]
+  "Return a tuple of the x y center point of the img"
+  (let [img (dom/nodes (css/sel li "img"))
+        xy [(/ (dom/attr img :width) 2) (/ (dom/attr img :height) 2)]]
+    (map Math/floor xy)))
+
+(defn get-highest-zindex [class]
+  "Return the highest zIndex in a stack of photos"
+  (let [li (map (fn [l] (.parseInt js/window (dom/style l :z-index))) (dom/nodes (dom/by-class class)))]
+    (apply max 0 li)))
