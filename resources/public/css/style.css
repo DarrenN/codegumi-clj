@@ -36,10 +36,29 @@ form {
     opacity: 0;
     box-shadow: 0 0 2px 0 #000;
     padding: 0;
+    border: #fff 2px solid;
+}
+
+#photos li div.image-mask {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    overflow: auto;
+    background: rgba(0,0,0,0);
+}
+
+#photos li.drag {
+
+}
+
+#photos li a {
+    display: block;
+    margin: 0;
+    border: 0;
 }
 
 #photos li img {
-    border: #fff 2px solid;
+
     margin: 0;
     display: block;
 }
