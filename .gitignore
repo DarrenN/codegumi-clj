@@ -3,7 +3,7 @@
 /target
 /classes
 /checkouts
-/resources/public/json/
+/resources/public/json/*.json
 /resources/public/js/script.js
 pom.xml
 pom.xml.asc
