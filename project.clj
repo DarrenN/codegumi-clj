@@ -11,6 +11,7 @@
                  [clj-http "0.7.7"]
                  [cheshire "5.2.0"]
                  [hiccup "1.0.4"]
+                 [domina "1.0.2"]
                  [enfocus "2.0.2"]
                  [cljs-ajax "0.2.2"]
                  [environ "0.4.0"]]
@@ -20,9 +21,9 @@
   :source-paths ["src/clj" "src/cljs"]
   :cljsbuild {
               :builds [{
-                        ; Path to top-level CLJS dir
+                                        ; Path to top-level CLJS dir
                         :source-paths ["src/cljs"]
-                        ; Compiler options:
+                                        ; Compiler options:
                         :compiler {
                                    :output-dir "target/cljs-out"
                                    :output-to "resources/public/js/script.js"
