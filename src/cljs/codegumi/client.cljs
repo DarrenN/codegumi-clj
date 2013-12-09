@@ -3,6 +3,7 @@
    [codegumi.buffer :as buffer]
    [codegumi.photo :as photo]
    [clojure.string :as string]
+   [goog.object :as gobj]
    [enfocus.core :as ef]
    [enfocus.events :as events]
    [enfocus.effects :as effects]
@@ -20,14 +21,13 @@
 (defn ^:export log [thing] (.log js/console (clj->js thing)))
 (aset js/window "log" log)
 
-; Global mutable values
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Global mutable values
+
 (def window-dimensions (atom {:width (.-innerWidth js/window) :height (.-innerHeight js/window)}))
 (def item-counter (atom 0))
 (def random-play (atom 1))
 (def timeout-id (atom 0))
-
-; When window is resized, recalc window-dimensions to new value
-(ef/at js/window (events/listen :resize (fn [] (reset! window-dimensions {:width (.-innerWidth js/window) :height (.-innerHeight js/window)}))))
 
 (em/defaction fade-out-photo [id]
   [id]
@@ -40,9 +40,10 @@
 
 (defn on-item-add [item]
   (when-not (nil? item)
-    (ef/at "#photos" (ef/append (photo/build-photo-node item
-                                                        @window-dimensions
-                                                        (fn [] (fade-in-photo (photo/get-photo-id item))))))))
+    (ef/at "#photos" (ef/append
+                      (photo/build-photo-node item
+                                              @window-dimensions
+                                              (fn [] (fade-in-photo (photo/get-photo-id item))))))))
 
 (defn on-item-remove [item]
   (when-not (nil? item)
@@ -87,7 +88,7 @@
                            :headers {:Accept "application/json"}}))
 
 (defn check-interval []
-  ; Clear out any existing timeouts before starting a new one
+  "Clear out any existing timeouts before starting a new one"
   (when (= 1 @random-play)
     (fetch-random)
     (js/clearTimeout @timeout-id)
@@ -98,32 +99,13 @@
   (reset! random-play 0)
   (fetch-tag (ef/from "#tag-input" (ef/get-prop :value))))
 
-(ef/at "#tag-submit" (events/listen :click submit-handler))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Drag & Drop courtesy of core.async
 
-; Pause loading random images
-(ef/at "#btn-pause" (events/listen :click
-                                   (fn [e]
-                                     (.preventDefault e)
-                                     (reset! random-play 0))))
-
-; Restart random image loads
-(ef/at "#btn-play" (events/listen :click
-                                 (fn [e]
-                                   (.preventDefault e)
-                                   (reset! random-play 1)
-                                   (check-interval))))
-
-
-(defn extract-photo-center [li]
-  "Return a tuple of the x y center point of the img"
-  (let [img (dom/nodes (css/sel li "img"))
-        xy [(/ (dom/attr img :width) 2) (/ (dom/attr img :height) 2)]]
-    (map Math/floor xy)))
-
-(defn get-highest-zindex [class]
-  "Return the highest zIndex in a stack of photos"
-  (let [li (map (fn [l] (.parseInt js/window (dom/style l :z-index))) (dom/nodes (dom/by-class class)))]
-    (apply max 0 li)))
+(defn calc-offset [evt ctr offset]
+  (let [x (str (- (.-clientX evt) (first offset)) "px")
+        y (str (- (.-clientY evt) (second offset)) "px")]
+    [x y]))
 
 (defn merge-chans [& chans]
   (let [rc (chan)]
@@ -152,8 +134,9 @@
     (reset! random-play 0) ; stop the cycling
     (let [div (.-target evt)
           li (.-parentNode div)
-          ctr (extract-photo-center li)
-          newz (inc (get-highest-zindex "photo-li"))
+          ctr (photo/get-photo-center li)
+          newz (inc (photo/get-highest-zindex "photo-li"))
+          offsets [(.-offsetX evt) (.-offsetY evt)]
           mouse (listen js/document :mousemove :mouse)
           up (listen js/document :mouseup :up)
           chan (merge-chans mouse up)]
@@ -161,17 +144,43 @@
       (dom/set-styles! li {:z-index newz})
       (go
        (loop [l li]
-         (let [[msg-name msg-data] (<! chan)]
+         (let [[msg-name msg-data] (<! chan)
+               [ox oy] (calc-offset msg-data ctr offsets)]
            (when (= msg-name :up)
              (stop-drag l chan))
            (when-not (= msg-name :up)
-             (dom/set-styles! l {:top (str (- (.-clientY msg-data) (second ctr)) "px"), :left (str (- (.-clientX msg-data) (first ctr)) "px")})
+             (dom/set-styles! l {:top oy, :left ox})
              (recur l))))))))
 
 (let [mouse (listen js/document :mousedown :down)]
+  "Listen to any mousedown in the document"
   (go (while true
         (let [e (<! mouse)]
           (start-drag e)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; DOM Event listeners
+
+(ef/at "#tag-submit" (events/listen :click submit-handler))
+
+;; Pause loading random images
+(ef/at "#btn-pause" (events/listen :click
+                                   (fn [e]
+                                     (.preventDefault e)
+                                     (reset! random-play 0))))
+
+;; Restart random image loads
+(ef/at "#btn-play" (events/listen :click
+                                 (fn [e]
+                                   (.preventDefault e)
+                                   (reset! random-play 1)
+                                   (check-interval))))
+
+;; When window is resized, recalc window-dimensions to new value
+(ef/at js/window (events/listen :resize
+                                (fn []
+                                  (reset! window-dimensions
+                                          {:width (.-innerWidth js/window) :height (.-innerHeight js/window)}))))
 
 (when (nil? (.-Flicky js/window))
   (check-interval))
