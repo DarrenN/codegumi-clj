@@ -43,7 +43,9 @@
 
 (defn image-template [item image position]
   (ef/html
-     [:li {:id (string/join "_" ["photo" (item :counter)]), :class (image :size), :style position}]))
+   [:li {:id (string/join "_" ["photo" (item :counter)]), :class (str (image :size) " photo-li"), :style position}
+    [:div {:class "image-mask"}]
+    [:a {:class "image-link", :href (image :url)}]]))
 
 (defn build-photo-node [item window onload]
   ; We have to create the Image dynamically so we can attach an onload
@@ -58,6 +60,8 @@
     (set! (.-height img) (image :height))
     (set! (.-alt img) (get item "owner"))
     (set! (.-title img) (get item "title"))
+    (set! (.-className img) "photo")
     (set! (.-onload img) onload)
-    (ef/at li (ef/append img))
+    (ef/at li
+           ".image-link" (ef/append img))
     li))
