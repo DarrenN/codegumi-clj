@@ -4,7 +4,10 @@
    [goog.object :as gobj]
    [domina :as dom]
    [domina.css :as css]
-   [enfocus.core :as ef]))
+   [enfocus.core :as ef]
+   [hiccups.runtime :as hiccupsrt])
+  (:require-macros
+   [hiccups.core :as hiccups]))
 
 ;; Enfocus spits out hiccup temapltes to console.log in ef/html
 ;; unless we set this
@@ -15,7 +18,7 @@
 (def photo-sizes ["l" "m" "n" "o" "q" "s" "t" "z"])
 
 (defn get-photo-id [item]
-  (string/join "_" ["#photo" (item :counter)]))
+  (str "#photo_" (item :counter)))
 
 (defn get-photo-size [photo]
   "Randomly find a photo size from the object, recur until a valid one is found"
@@ -45,10 +48,9 @@
     (str "top: " (.floor js/Math top) "px; left: " (.floor js/Math  left) "px; z-index: " zindex)))
 
 (defn image-template [item image position]
-  (ef/html
-   [:li {:id (string/join "_" ["photo" (item :counter)]), :class (str (image :size) " photo-li"), :style position}
-    [:div {:class "image-mask"}]
-    [:a {:class "image-link", :href (image :url)}]]))
+  (hiccups/html
+   [:li {:id (str "photo_" (item :counter)), :class (str (image :size) " photo-li"), :style position}
+    [:div {:class "image-mask"}]]))
 
 (defn build-photo-node [item window onload]
   ; We have to create the Image dynamically so we can attach an onload
@@ -56,7 +58,8 @@
   (let [image (get-photo-size item)
         position (get-photo-position image window)
         li (image-template item image position)
-        img (js/Image.)]
+        img (js/Image.)
+        a (hiccups/html [:a {:class "image-link", :href (image :url)}])]
     ; set img properties
     (set! (.-src img) (image :url))
     (set! (.-width img) (image :width))
@@ -65,10 +68,9 @@
     (set! (.-title img) (get item "title"))
     (set! (.-className img) "photo")
     (set! (.-onload img) onload)
-    (ef/at li
-           ".image-link" (ef/append img))
-    (gobj/clear img)
-    li))
+    (let [aimg (dom/single-node (dom/append! (dom/html-to-dom a) img))]
+      (dom/single-node (dom/append! (dom/html-to-dom li) aimg)))
+    ))
 
 (defn get-photo-center [li]
   "Return a tuple of the x y center point of the img"
