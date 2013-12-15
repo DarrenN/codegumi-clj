@@ -1,6 +1,5 @@
 (ns codegumi.core
   (:require
-   [codegumi.buffer :as buffer]
    [codegumi.photo :as photo]
    [clojure.string :as string]
    [goog.object :as gobj]
@@ -25,53 +24,60 @@
 ;;; Global mutable values
 
 (def window-dimensions (atom {:width (.-innerWidth js/window) :height (.-innerHeight js/window)}))
-(def item-counter (atom 0))
+(def item-counter (atom 0)) ; used to generate IDs for photos
 (def random-play (atom 1))
 (def timeout-id (atom 0))
+(def buffer-length 25) ; Size of photo queue
+(def ul (dom/by-id "photos")) ; Photo UL
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Enfocus animations for photos
 
 (em/defaction fade-out-photo [id]
   [id]
-  (effects/chain (effects/fade-out (+ 1000 (rand 500)))
-                 (ef/remove-node)))
+  (effects/fade-out (+ 1000 (rand 500))
+                    (fn [node] (dom/destroy! node))))
 
 (em/defaction fade-in-photo [id]
   [id]
   (effects/chain (effects/fade-in (+ 1000 (rand 500)))))
 
-(defn on-item-add [item]
-  (when-not (nil? item)
-    (ef/at "#photos" (ef/append
-                      (photo/build-photo-node item
-                                              @window-dimensions
-                                              (fn [] (fade-in-photo (photo/get-photo-id item))))))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Photo Queue (core.async)
 
-(defn on-item-remove [item]
-  (when-not (nil? item)
-    (fade-out-photo (photo/get-photo-id item))))
+(defn make-li [photo id]
+  (let [lid (str "photo_" id)
+        node (photo/build-photo-node photo @window-dimensions (fn [] (fade-in-photo (str "#" lid))))]
+    (dom/append! ul node)))
 
-(buffer/register-listener buffer/destroy-listeners on-item-remove)
-(buffer/register-listener buffer/add-listeners on-item-add)
+(defn remove-li [id]
+  (let [lid (str "photo_" id)]
+    (fade-out-photo (str "#" lid))))
 
-; Create the main sliding buffer
-(def photo-queue (buffer/create-buffer 25))
+(defn load-squares [response]
+  (let [c (chan buffer-length)
+        r (get response "photos")]
+    (doseq [i r]
+      (put! c (conj i {:counter @item-counter}))
+      (swap! item-counter inc))
+    c))
 
-; Recur through photos with a 50ms delay, the item-counter is a global
-; and used for ids
-(defn append-photos [response]
-  (let [r (first response)
-        photo (conj r {:counter @item-counter})]
-    (when-not (nil? r)
-      (photo-queue photo)
-      (swap! item-counter inc)) ; increment global counter
-    (when-not (empty? response)
-      (js/setTimeout #(append-photos (vec (rest response))) 50))))
+(defn render-squares [c]
+  (go
+   (while true
+     (let [p (<! c)
+           id (:counter p)
+           offset (- @item-counter id)
+           floor (- @item-counter buffer-length)]
+       (make-li p id)
+       (remove-li (- floor offset))
+       (<! (timeout 10))))))
 
 (defn append-tags [response]
   (ef/at ".title-tag" (ef/content (string/join "," (get response "tags")))))
 
 (defn handler [response]
-  (aset js/window "response" response)
-  (append-photos (get response "photos"))
+  (render-squares (load-squares response))
   (append-tags response))
 
 (defn error-handler [{:keys [status status-text]}]
@@ -95,7 +101,6 @@
     (reset! timeout-id (js/setTimeout #(check-interval) 10000))))
 
 (defn submit-handler [e]
-  (.preventDefault e)
   (reset! random-play 0)
   (fetch-tag (ef/from "#tag-input" (ef/get-prop :value))))
 
@@ -119,7 +124,7 @@
   "Send events on el to a channel, with msg as a label"
   (let [out (chan)]
     (ef/at el (events/listen type
-                             (fn [e] (put! out [msg e]))))
+                             (fn [e] (.preventDefault e) (put! out [msg e]))))
     out))
 
 (defn stop-drag [li chan]
@@ -146,13 +151,12 @@
        (loop [l li]
          (let [[msg-name msg-data] (<! chan)
                [ox oy] (calc-offset msg-data ctr offsets)]
-           (when (= msg-name :up)
-             (stop-drag l chan))
-           (when-not (= msg-name :up)
-             (dom/set-styles! l {:top oy, :left ox})
-             (recur l))))))))
+           (if (= msg-name :up)
+             (stop-drag l chan)
+             (do (dom/set-styles! l {:top oy, :left ox})
+                 (recur l)))))))))
 
-(let [mouse (listen js/document :mousedown :down)]
+(let [mouse (listen "#photos" :mousedown :down)]
   "Listen to any mousedown in the document"
   (go (while true
         (let [e (<! mouse)]
@@ -161,20 +165,21 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; DOM Event listeners
 
-(ef/at "#tag-submit" (events/listen :click submit-handler))
+(defn dispatch-click [[msg evt]]
+  (let [id (dom/attr (.-target evt) "id")]
+    (cond
+     (= id "btn-pause") (reset! random-play 0)
+     (= id "tag-submit") (submit-handler evt)
+     (= id "btn-play") (do
+                         (reset! random-play 1)
+                         (check-interval))
+     :else evt)))
 
-;; Pause loading random images
-(ef/at "#btn-pause" (events/listen :click
-                                   (fn [e]
-                                     (.preventDefault e)
-                                     (reset! random-play 0))))
-
-;; Restart random image loads
-(ef/at "#btn-play" (events/listen :click
-                                 (fn [e]
-                                   (.preventDefault e)
-                                   (reset! random-play 1)
-                                   (check-interval))))
+(let [click (listen ".tag-form-button" :click :click)]
+  "Listen to any clicke events in the document"
+  (go (while true
+        (let [e (<! click)]
+          (dispatch-click e)))))
 
 ;; When window is resized, recalc window-dimensions to new value
 (ef/at js/window (events/listen :resize
