@@ -48,7 +48,11 @@ form {
 }
 
 #photos li.drag {
+    cursor: pointer;
+}
 
+#photos li.drag .image-mask {
+    cusrosr: pointer;
 }
 
 #photos li a {
@@ -58,7 +62,6 @@ form {
 }
 
 #photos li img {
-
     margin: 0;
     display: block;
 }
