@@ -47,6 +47,23 @@ form {
 	  background-image:      -o-linear-gradient(top, #ffffff, #eeeeee);
 }
 
+.tag-form-button {
+    background: transparent;
+    border: 0;
+    padding: 4px 6px;
+    border-radius: 4px;
+    margin: 0;
+    color: #999;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+.tag-form-button:hover {
+    background: rgba(0,0,0,0.10);
+    box-shadow: rgba(0,0,0,0.15) 0 1px 2px inset;
+    color: #666;
+}
+
 .logo {
     display: inline-block;
     position: relative;
@@ -57,8 +74,14 @@ form {
 .tag-input {
     font-size: 0.8rem;
     padding: 4px;
+    margin: 0 10px 0 0;
     min-width: 200px;
     font-weight: normal;
+}
+
+.tag-input:disabled {
+    font-style: italic;
+    color: #ccc;
 }
 
 .title-tag {

@@ -67,6 +67,23 @@
     (. anim (play))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Form manipulation
+
+(defn remove-loading-state! []
+  (let [input (dom/by-id "tag-input")
+        inode (dom/nodes (css/sel "#tag-submit > i"))]
+    (dom/remove-attr! input :disabled)
+    (doseq [class ["fa-spin" "fa-cog"]] (dom/remove-class! inode class))
+    (dom/add-class! inode "fa-search")))
+
+(defn set-loading-state! []
+  (let [input (dom/by-id "tag-input")
+        inode (dom/nodes (css/sel "#tag-submit > i"))]
+    (dom/set-attr! input :disabled)
+    (dom/remove-class! inode "fa-search")
+    (dom/add-class! inode "fa-cog fa-spin")))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Photo Queue (core.async)
 
 (defn make-li [photo id]
@@ -98,8 +115,13 @@
        (<! (timeout 10))))))
 
 (defn append-tags [response]
-  (let [r (js->clj response)]
-    (ef/at ".title-tag" (ef/content (string/join "," (get r "tags"))))))
+  (let [r (js->clj response)
+        tstr (string/join ", " (get r "tags"))]
+    (ef/at ".title-tag" (ef/content tstr))
+    (ef/at ".tag-input" (ef/do->
+                         (ef/set-attr :value " ")
+                         (ef/remove-attr :value)
+                         (ef/set-attr :placeholder (str "Current tag: " tstr))))))
 
 (defn set-history-state [response]
   "Set the url to the current tags using history.pushState"
@@ -119,6 +141,7 @@
 
 (defn handler [response]
   "Take the response and send it along its way"
+  (remove-loading-state!)
   (render-squares (load-squares response))
   (append-tags response)
   (set-history-state response)
@@ -128,6 +151,7 @@
   (.log js/console (str "something bad happened: " status " " status-text)))
 
 (defn fetch-random []
+  (set-loading-state!)
   (GET "/tags" {:handler handler
                 :error-handler error-handler
                 :headers {:Accept "application/json"}}))
@@ -145,8 +169,9 @@
     (reset! timeout-id (js/setTimeout #(check-interval) 10000))))
 
 (defn submit-handler [e]
-  (reset! random-play 0)
-  (fetch-tag (ef/from "#tag-input" (ef/get-prop :value))))
+  (set-loading-state!)
+  (fetch-tag (ef/from "#tag-input" (ef/get-prop :value)))
+  (reset! random-play 0))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Drag & Drop courtesy of core.async
@@ -215,7 +240,7 @@
 ;;; DOM Event listeners
 
 (defn dispatch-click [[msg evt]]
-  (let [id (dom/attr (.-target evt) "id")]
+  (let [id (dom/attr (.-currentTarget evt) "id")]
     (cond
      (= id "btn-pause") (reset! random-play 0)
      (= id "tag-submit") (submit-handler evt)
