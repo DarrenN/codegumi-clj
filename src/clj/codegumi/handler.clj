@@ -12,7 +12,7 @@
    :body data})
 
 (defroutes app-routes
-  (GET "/" [] (views/index-page))
+  (GET "/" [] (views/page-template))
 
   (GET "/tags" [] (let [photos (flickr/get-random-photos)]
                     (if (nil? photos)
