@@ -3,6 +3,8 @@
    [codegumi.photo :as photo]
    [clojure.string :as string]
    [goog.object :as gobj]
+   [goog.fx.dom :as fx-dom]
+   [goog.events :as gevents]
    [enfocus.core :as ef]
    [enfocus.events :as events]
    [enfocus.effects :as effects]
@@ -27,32 +29,54 @@
 (def item-counter (atom 0)) ; used to generate IDs for photos
 (def random-play (atom 1))
 (def timeout-id (atom 0))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Global immutable values
+
 (def buffer-length 25) ; Size of photo queue
 (def ul (dom/by-id "photos")) ; Photo UL
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Enfocus animations for photos
+;;; Animations for photos
 
-(em/defaction fade-out-photo [id]
-  [id]
-  (effects/fade-out (+ 1000 (rand 500))
-                    (fn [node] (dom/destroy! node))))
+(defn destroy-event [evt]
+  "Nuclear detonation of Event to allow for GC"
+  (let [anim (.-anim evt)
+        evtarget (.-target evt)]
+    (.dispose evtarget)
+    (.dispose anim)
+    (.dispose evt)
+    (gobj/clear anim)
+    (gobj/clear evt)))
 
-(em/defaction fade-in-photo [id]
-  [id]
-  (effects/chain (effects/fade-in (+ 1000 (rand 500)))))
+(defn destroy-li-el [evt]
+  (let [node (.-element (.-anim evt))]
+    (dom/destroy! node)
+    (destroy-event evt)))
+
+(defn fade-out-photo [id]
+  "Doing this manually because Enfocus doesn't properly dispose of the Event"
+  (let [node (dom/by-id id)
+        anim (fx-dom/FadeOut. node (+ 1000 (rand 500)))]
+    (when-not (nil? node)
+      (gevents/listen anim js/goog.fx.Animation.EventType.END destroy-li-el)
+      (. anim (play)))))
+
+(defn fade-in-photo [id]
+  (let [anim (fx-dom/FadeIn. (dom/by-id id) (+ 1000 (rand 500)))]
+    (. anim (play))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Photo Queue (core.async)
 
 (defn make-li [photo id]
   (let [lid (str "photo_" id)
-        node (photo/build-photo-node photo @window-dimensions (fn [] (fade-in-photo (str "#" lid))))]
+        node (photo/build-photo-node photo @window-dimensions (fn [] (fade-in-photo lid)))]
     (dom/append! ul node)))
 
 (defn remove-li [id]
   (let [lid (str "photo_" id)]
-    (fade-out-photo (str "#" lid))))
+    (fade-out-photo lid)))
 
 (defn load-squares [response]
   (let [c (chan buffer-length)
@@ -76,7 +100,17 @@
 (defn append-tags [response]
   (ef/at ".title-tag" (ef/content (string/join "," (get response "tags")))))
 
+(defn remove-xhr-listeners! []
+  "After every XHR we need to remove the complete listeners from the goog.events.listeners_ stack"
+  (let [events (-> js/window .-goog .-events)
+        listeners (js->clj (.-listeners_ events) :keywordize-keys true)]
+    (doseq [listener listeners]
+      (let [[key l] listener]
+        (if (= (.-type l) "complete")
+          (.unlistenByKey events (.-key l)))))))
+
 (defn handler [response]
+  (remove-xhr-listeners!)
   (render-squares (load-squares response))
   (append-tags response))
 
@@ -131,6 +165,9 @@
   "Cleanup the channels and remove styling so we can change appearance"
   (close! chan)
   (dom/remove-class! li "drag")
+  ;; It is very important to manually clear these listeners because
+  ;; otherwise they will stack up in memory as detached elements
+  (ef/at js/document (events/remove-listeners :mousemove :mouseup))
   li)
 
 (defn start-drag [[msg evt]]
@@ -152,8 +189,10 @@
          (let [[msg-name msg-data] (<! chan)
                [ox oy] (calc-offset msg-data ctr offsets)]
            (if (= msg-name :up)
-             (stop-drag l chan)
+             (do (stop-drag l chan)
+                 (.dispose evt)) ; manually dispose of Event
              (do (dom/set-styles! l {:top oy, :left ox})
+                 (.dispose evt) ; manually dispose of Event
                  (recur l)))))))))
 
 (let [mouse (listen "#photos" :mousedown :down)]
