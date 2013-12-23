@@ -101,6 +101,13 @@
   (let [r (js->clj response)]
     (ef/at ".title-tag" (ef/content (string/join "," (get r "tags"))))))
 
+(defn set-history-state [response]
+  "Set the url to the current tags using history.pushState"
+  (let [r (js->clj response)
+        history (.-history js/window)
+        tags (clojure.string/join " " (get r "tags"))]
+    (.pushState history r tags (str "/tags/" tags))))
+
 (defn remove-xhr-listeners! []
   "After every XHR we need to remove the complete listeners from the goog.events.listeners_ stack"
   (let [events (-> js/window .-goog .-events)
@@ -111,8 +118,10 @@
           (.unlistenByKey events (.-key l)))))))
 
 (defn handler [response]
+  "Take the response and send it along its way"
   (render-squares (load-squares response))
   (append-tags response)
+  (set-history-state response)
   (remove-xhr-listeners!))
 
 (defn error-handler [{:keys [status status-text]}]
