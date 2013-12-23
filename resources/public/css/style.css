@@ -14,18 +14,55 @@ body {
 }
 
 h1 {
-    margin: 20px 0 0 20px;
-    color: #666;
-    position: absolute;
-    z-index: 1000;
-    background: #fff;
+    margin: 12px 30px 0 0;
+    color: #999;
+    font-size: 1rem;
+    display: inline-block;
+    float: right;
+    padding: 3px 8px 4px 8px;
+    background: #ccc;
+    border-radius: 4px;
+    box-shadow: #999 0 1px 2px inset;
+    text-shadow: #fff 0 1px 1px;
+}
+
+input, button {
+    position: relative;
+    top: -10px;
 }
 
 form {
     position: absolute;
     z-index: 1000;
     background: #fff;
-    margin: 70px 0 0 20px;
+    margin: 0;
+    padding: 5px 10px;
+    top: 0;
+    width: 100%;
+    box-shadow: #000 0px 0px 3px;
+	  background-image: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#ffffff), to(#eeeeee));
+	  background-image: -webkit-linear-gradient(top, #ffffff, #eeeeee);
+	  background-image:    -moz-linear-gradient(top, #ffffff, #eeeeee);
+	  background-image:     -ms-linear-gradient(top, #ffffff, #eeeeee);
+	  background-image:      -o-linear-gradient(top, #ffffff, #eeeeee);
+}
+
+.logo {
+    display: inline-block;
+    position: relative;
+    top: 4px;
+    margin: 0 10px 0 0;
+}
+
+.tag-input {
+    font-size: 0.8rem;
+    padding: 4px;
+    min-width: 200px;
+    font-weight: normal;
+}
+
+.title-tag {
+    font-weight: normal;
 }
 
 #photos li {
