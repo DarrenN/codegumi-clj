@@ -80,7 +80,7 @@
 
 (defn load-squares [response]
   (let [c (chan buffer-length)
-        r (get response "photos")]
+        r (get (js->clj response) "photos")]
     (doseq [i r]
       (put! c (conj i {:counter @item-counter}))
       (swap! item-counter inc))
@@ -98,7 +98,8 @@
        (<! (timeout 10))))))
 
 (defn append-tags [response]
-  (ef/at ".title-tag" (ef/content (string/join "," (get response "tags")))))
+  (let [r (js->clj response)]
+    (ef/at ".title-tag" (ef/content (string/join "," (get r "tags"))))))
 
 (defn remove-xhr-listeners! []
   "After every XHR we need to remove the complete listeners from the goog.events.listeners_ stack"
@@ -110,9 +111,9 @@
           (.unlistenByKey events (.-key l)))))))
 
 (defn handler [response]
-  (remove-xhr-listeners!)
   (render-squares (load-squares response))
-  (append-tags response))
+  (append-tags response)
+  (remove-xhr-listeners!))
 
 (defn error-handler [{:keys [status status-text]}]
   (.log js/console (str "something bad happened: " status " " status-text)))
@@ -226,5 +227,6 @@
                                   (reset! window-dimensions
                                           {:width (.-innerWidth js/window) :height (.-innerHeight js/window)}))))
 
-(when (nil? (.-Flicky js/window))
-  (check-interval))
+(if (nil? (.-Flicky js/window))
+  (check-interval)
+  (handler (.-Flicky js/window)))
