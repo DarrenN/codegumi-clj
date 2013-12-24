@@ -14,6 +14,12 @@
        (include-css "/css/font-awesome.min.css")
        (include-css "/css/style.css")]
       [:body
+       [:script (str "(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-33703989-1', 'codegumi.com');
+  ga('send', 'pageview');")]
        [:form {:id "tag-form"}
         [:a {:href "http://darrenknewton.com" :title "Back to blog"} [:img {:src "/img/logo_solo.svg" :width 40 :height 40 :class "logo" :alt "v25media"}]]
         [:input {:type "text" :placeholder "Enter search tag" :id "tag-input" :class "tag-input"}]
