@@ -18,6 +18,19 @@
                      "per_page" 25
                      "tag_mode" "all"})
 
+(def default-tags ["yamanote" "akihabara" "osaka" "kabukicho"])
+
+(def public-files (file-seq (io/file (io/resource "public/json"))))
+
+(defn only-files [files-s]
+  (filter #(.isFile %) files-s))
+
+(defn file-names [files-s]
+  (map #(.getName %) files-s))
+
+(defn only-json [files-s]
+  (filter #(re-find #"json" %) files-s))
+
 (defn search-json
   [params]
   (http/get (:url api) {:query-params (merge default-params {"method" (:search api), "nojsoncallback" 1} params)
@@ -47,9 +60,14 @@
       (save-photo-json filename tags))))
 
 (defn get-random-photos []
-  (let [files (filter (fn [f] (re-find #"json" f)) (seq (.list (io/file (io/resource "public/json/")))))
-        filename (rand-nth files)
-        filepath (io/resource (str "public/json/" filename))]
-    (if (.exists (io/file filepath))
-      (slurp filepath)
-      (get-random-photos))))
+  "Pull a random photo set from /json, if there are no files, then pull a yamanote set"
+  (let [files (-> public-files
+                  only-files
+                  file-names
+                  only-json)]
+    (if (empty? files)
+      (get-photos [(rand-nth default-tags)])
+      (let [filepath (io/resource (str "public/json/" (rand-nth files)))]
+        (if (.exists (io/file filepath))
+          (slurp filepath)
+          (get-random-photos))))))
