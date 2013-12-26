@@ -17,6 +17,7 @@
                  [environ "0.4.0"]
                  [hiccups "0.2.0"]
                  [me.raynes/fs "1.4.4"]
+                 [clj-time "0.6.0"]
                  [com.taoensso/timbre "2.7.1"]]
   :plugins [[lein-cljsbuild "1.0.1-SNAPSHOT"]
             [lein-ring "0.8.8"]
