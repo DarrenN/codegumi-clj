@@ -11,6 +11,13 @@
      (html5
       [:head
        [:title "CodeGumi | 符組"]
+       [:meta {:http-equiv "Content-Type" :content "text/html; charset=UTF-8"}]
+       [:meta {:charset "utf-8"}]
+       [:meta {:content "IE=edge,chrome=1" :http-equiv "X-UA-Compatible"}]
+       [:meta {:content "width=device-width" :name "viewport"}]
+       [:meta {:content "yes" :name "apple-mobile-web-app-capable"}]
+       [:meta {:content "Darren Newton" :name "author"}]
+       [:meta {:content "A little experiment with the Flickr photo APIs - written in Clojure/ClojureScript" :name "description"}]
        (include-css "/css/font-awesome.min.css")
        (include-css "/css/style.css")]
       [:body
@@ -21,12 +28,16 @@
   ga('create', 'UA-33703989-1', 'codegumi.com');
   ga('send', 'pageview');")]
        [:form {:id "tag-form"}
-        [:a {:href "http://darrenknewton.com" :title "Back to blog"} [:img {:src "/img/logo_solo.svg" :width 40 :height 40 :class "logo" :alt "v25media"}]]
+        [:a {:href "/" :title "CodeGumi"} [:img {:src "/img/logo_solo.svg" :width 40 :height 40 :class "logo" :alt "v25media"}]]
         [:input {:type "text" :placeholder "Enter search tag" :id "tag-input" :class "tag-input"}]
-        [:button {:id "tag-submit" :class "tag-form-button"} [:i {:class "fa fa-search"}]]
-        [:button {:id "btn-pause" :class "tag-form-button"} [:i {:class "fa fa-pause"}]]
-        [:button {:id "btn-play" :class "tag-form-button"} [:i {:class "fa fa-play"}]]
-        [:h1 [:span {:class "title-tag"}]]]
+        [:button {:id "tag-submit" :class "tag-form-button" :title "Search"} [:i {:class "fa fa-search"}]]
+        [:button {:id "btn-pause" :class "tag-form-button" :title "Pause"} [:i {:class "fa fa-pause"}]]
+        [:button {:id "btn-play" :class "tag-form-button" :title "Play"} [:i {:class "fa fa-play"}]]
+        [:h1
+         [:a {:href "http://darrennewton.com" :title "Darren Newton"} "Me"]
+         " | "
+         [:a {:href "https://github.com/DarrenN/codegumi-clj" :title "source code"} "GitHub"]
+         [:span {:class "title-tag" :title "Current search tag"}]]]
        [:ul {:id "photos"}]
        (when-not (nil? photos)
          [:script (str "var Flicky = " photos ";")])
