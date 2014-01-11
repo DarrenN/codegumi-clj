@@ -3,11 +3,21 @@
             [compojure.handler :as handler]
             [compojure.route :as route]
             [clojure.string :as string]
+            [clj-time.core :refer (years from-now)]
+            [clj-time.coerce :as coerce]
+            [ring.util.time :as ring-time]
             [codegumi.flickr :as flickr]
             [codegumi.views :as views]
             [taoensso.timbre :as timbre]))
 
 (timbre/refer-timbre)
+
+(defn never-expires []
+  (-> 1
+      years
+      from-now
+      coerce/to-date
+      ring-time/format-date))
 
 (defn json-response [data & [status]]
   {:status (or status 200)
@@ -15,7 +25,10 @@
    :body data})
 
 (defroutes app-routes
-  (GET "/" [] (views/page-template))
+  (GET "/" []
+       {:headers {"Expires" (never-expires)
+                  "Content-Type" "text/html; charset=utf-8"}
+        :body (views/page-template)})
 
   (GET "/tags" [] (let [photos (flickr/get-random-photos)]
                     (if (nil? photos)
