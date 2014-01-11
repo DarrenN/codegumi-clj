@@ -118,6 +118,7 @@
   (let [r (js->clj response)
         tstr (string/join ", " (get r "tags"))]
     (ef/at ".title-tag" (ef/content tstr))
+    (ef/at "title" (ef/content (str (string/capitalize tstr) " | CodeGumi | 符組")))
     (ef/at ".tag-input" (ef/do->
                          (ef/set-attr :value " ")
                          (ef/remove-attr :value)
