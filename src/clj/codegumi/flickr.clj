@@ -12,7 +12,7 @@
 
 (timbre/refer-timbre)
 
-(def api {:url "http://api.flickr.com/services/rest/"
+(def api {:url "https://api.flickr.com/services/rest/"
           :key (environ/env :flickr-api-key)
           :format "json"
           :search "flickr.photos.search"})
