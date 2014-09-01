@@ -1,14 +1,16 @@
 (ns codegumi.flickr
-  (:require [clj-http.client :as http]
-            [clojure.string :as string]
-            [clojure.java.io :as io]
-            [cheshire.core :refer :all]
-            [environ.core :as environ]
-            [me.raynes.fs :as fs]
-            [clj-time.core :as time]
-            [clj-time.coerce :as timec]
-            [clj-time.local :as timel]
-            [taoensso.timbre :as timbre]))
+  (:require
+   [clj-http.client :as http]
+   [clojure.string :as string]
+   [clojure.java.io :as io]
+   [clojure.core.async :as async :refer (<!! >!! go chan put! take! alts! close! thread)]
+   [cheshire.core :refer :all]
+   [environ.core :as environ]
+   [me.raynes.fs :as fs]
+   [clj-time.core :as time]
+   [clj-time.coerce :as timec]
+   [clj-time.local :as timel]
+   [taoensso.timbre :as timbre]))
 
 (timbre/refer-timbre)
 
@@ -17,13 +19,29 @@
           :format "json"
           :search "flickr.photos.search"})
 
-(def default-params {"api_key" (:key api)
-                     "format" (:format api)
-                     "sort" "interestingness-desc"
-                     "content_type" 1
-                     "extras" "description,owner_name,tags,path_alias,url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o"
-                     "per_page" 25
-                     "tag_mode" "all"})
+(def params-tags-int {"api_key" (:key api)
+                      "format" (:format api)
+                      "sort" "interestingness-desc"
+                      "content_type" 1
+                      "extras" "description,owner_name,tags,path_alias,url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o"
+                      "per_page" 10
+                      "tag_mode" "all"})
+
+(def params-tags-rel {"api_key" (:key api)
+                      "format" (:format api)
+                      "sort" "relevance"
+                      "content_type" 1
+                      "extras" "description,owner_name,tags,path_alias,url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o"
+                      "per_page" 10
+                      "tag_mode" "all"})
+
+; This needs a text key with the searcg data
+(def params-text-int {"api_key" (:key api)
+                      "format" (:format api)
+                      "sort" "interestingness-desc"
+                      "content_type" 1
+                      "extras" "description,owner_name,tags,path_alias,url_sq,url_t,url_s,url_q,url_m,url_n,url_z,url_c,url_l,url_o"
+                      "per_page" 10})
 
 ;; Tags to pull when we have no data
 (def default-tags ["yamanote" "akihabara" "osaka" "kabukicho" "roppongi" "ginza" "asakusa"])
@@ -47,7 +65,7 @@
 (defn search-json
   "Make a Flickr request for files"
   [params]
-  (http/get (:url api) {:query-params (merge default-params {"method" (:search api), "nojsoncallback" 1} params)
+  (http/get (:url api) {:query-params (merge {"method" (:search api), "nojsoncallback" 1} params)
                                        :as :json
                                        :accept :json
                                        :throw-exceptions false}))
@@ -85,10 +103,21 @@
     (string/join [(io/resource "public/json/") (string/join "_" t) ".json"])))
 
 (defn search-tags
+  "Make three different requests to Flickr for the search params using core.async"
   [tags]
-  (let [json (search-json {"tags" (string/join "," tags)})]
-    (when (== (:status json) 200)
-      (get-in json [:body :photos :photo]))))
+  (let [c (chan)
+        res (atom [])]
+    (thread (>!! c (search-json
+                    (merge params-tags-int {"tags" (string/join "," tags)}))))
+    (thread (>!! c (search-json
+                    (merge params-tags-rel {"tags" (string/join "," tags)}))))
+    (thread (>!! c (search-json
+                    (merge params-text-int {"text" tags}))))
+    (doseq [_ (range 0 3)]
+      (let [r (<!! c)]
+        (when (== (:status r) 200)
+          (swap! res conj (get-in r [:body :photos :photo])))))
+    (flatten @res)))
 
 (defn save-photo-json
   "Pull photos from Flickr and stash in a cache file (.json)"
