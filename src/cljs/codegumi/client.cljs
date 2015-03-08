@@ -11,13 +11,10 @@
    [domina :as dom]
    [domina.css :as css]
    [ajax.core :refer [GET POST]]
-   [cljs.core.async :refer (<! >! chan put! take! alts! timeout close! dropping-buffer sliding-buffer)]
-   [clojure.browser.repl :as repl])
+   [cljs.core.async :refer (<! >! chan put! take! alts! timeout close! dropping-buffer sliding-buffer)])
   (:require-macros
    [enfocus.macros :as em]
    [cljs.core.async.macros :refer (go alt!)]))
-
-(repl/connect "http://localhost:9000/repl")
 
 (defn ^:export log [thing] (.log js/console (clj->js thing)))
 (aset js/window "log" log)

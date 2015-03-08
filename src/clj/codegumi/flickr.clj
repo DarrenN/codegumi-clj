@@ -14,6 +14,8 @@
 
 (timbre/refer-timbre)
 
+(def opts (atom {:json "/tmp/"}))
+
 (def api {:url "https://api.flickr.com/services/rest/"
           :key (environ/env :flickr-api-key)
           :format "json"
@@ -49,7 +51,7 @@
 ;; How many days before and after todays date to keep a photo file
 (def days-fresh 2)
 
-(def public-files (file-seq (io/file (io/resource "public/json"))))
+(def public-files (file-seq (io/file (:json @opts))))
 
 (defn only-files [files-s]
   (filter #(.isFile %) files-s))
@@ -99,8 +101,9 @@
 
 (defn make-filename-from-tags [tags]
   "Vector into a complete filename"
-  (let [t (make-tags tags)]
-    (string/join [(io/resource "public/json/") (string/join "_" t) ".json"])))
+  (let [t (make-tags tags)
+        json-dir (:json @opts)]
+    (string/join [json-dir "/" (string/join "_" t) ".json"])))
 
 (defn search-tags
   "Make three different requests to Flickr for the search params using core.async"
@@ -145,13 +148,14 @@
 
 (defn get-random-photos []
   "Pull a random photo set from /json, if there are no files, then pull a yamanote set"
-  (let [files (-> (file-seq (io/file (io/resource "public/json")))
+  (let [json-dir (:json @opts)
+        files (-> (file-seq (io/file json-dir))
                   only-files
                   file-names
                   only-json)]
     (if (empty? files)
       (get-default-sets)
-      (let [filepath (io/file (io/resource (str "public/json/" (rand-nth files))))]
+      (let [filepath (io/file (str json-dir (rand-nth files)))]
         (gc-cache-file! filepath)
         (if (.exists filepath)
           (slurp filepath)
