@@ -26,19 +26,19 @@
             [lein-environ "0.4.0"]]
   :source-paths ["src/clj" "src/cljs"]
   :hooks [leiningen.cljsbuild]
-  :cljsbuild {
-              :builds [{
-                        ;:jar true
-                                        ; Path to top-level CLJS dir
-                        :source-paths ["src/cljs"]
-                                        ; Compiler options:
-                        :compiler {
-                                   :output-to "resources/public/js/script.js"
-                                   :optimizations :simple
-                                   :pretty-print true}
-                        }]}
   :main codegumi.handler
   :ring {:handler codegumi.handler/app}
   :profiles
-  {:uberjar {:aot :all}
-   :dev {:dependencies [[ring-mock "0.1.5"]]}})
+  {:uberjar {:aot :all
+             :cljsbuild {:builds [{:source-paths ["src/cljs"]
+                                   :compiler {:output-to "resources/public/js/script.js"
+                                              :optimizations :simple
+                                              :pretty-print false}
+                                   }]}}
+   :dev {:dependencies [[ring-mock "0.1.5"]]
+         :cljsbuild {:builds [{:source-paths ["src/cljs"]
+                               :compiler {:output-dir "resources/public/js/cljs-out"
+                                          :output-to "resources/public/js/script.js"
+                                          :optimizations :simple
+                                          :pretty-print true
+                                          :source-map "resources/public/js/script.js.map"}}]}}})

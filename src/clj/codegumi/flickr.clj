@@ -14,7 +14,7 @@
 
 (timbre/refer-timbre)
 
-(def opts (atom {}))
+(def opts (atom {:json "/tmp/"}))
 
 (def api {:url "https://api.flickr.com/services/rest/"
           :key (environ/env :flickr-api-key)
@@ -51,7 +51,7 @@
 ;; How many days before and after todays date to keep a photo file
 (def days-fresh 2)
 
-(def public-files (file-seq (io/file (-> @opts :options :json))))
+(def public-files (file-seq (io/file (:json @opts))))
 
 (defn only-files [files-s]
   (filter #(.isFile %) files-s))
@@ -102,7 +102,7 @@
 (defn make-filename-from-tags [tags]
   "Vector into a complete filename"
   (let [t (make-tags tags)
-        json-dir (-> @opts :options :json)]
+        json-dir (:json @opts)]
     (string/join [json-dir "/" (string/join "_" t) ".json"])))
 
 (defn search-tags
@@ -148,7 +148,7 @@
 
 (defn get-random-photos []
   "Pull a random photo set from /json, if there are no files, then pull a yamanote set"
-  (let [json-dir (-> @opts :options :json)
+  (let [json-dir (:json @opts)
         files (-> (file-seq (io/file json-dir))
                   only-files
                   file-names
