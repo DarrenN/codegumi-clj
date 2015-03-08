@@ -17,7 +17,7 @@
    [enfocus.macros :as em]
    [cljs.core.async.macros :refer (go alt!)]))
 
-(repl/connect "http://localhost:9000/repl")
+;;(repl/connect "http://localhost:9000/repl")
 
 (defn ^:export log [thing] (.log js/console (clj->js thing)))
 (aset js/window "log" log)
